@@ -1,0 +1,8 @@
+## Interface: 80300
+## Author: stpain
+## Version: 0.0.1
+## Title: |cff0070DEGatherMate2|r database viewer
+## Notes: A simple database viewer for GatherMate2
+## Dependencies: GatherMate2
+
+GatherMate2_DbViewer.lua
