@@ -1,6 +1,11 @@
 
 local addonName, addon = ...
 
+SLASH_GATHERMATE2_DBBROWSER1 = '/gm2dbb'
+SlashCmdList['GATHERMATE2_DBBROWSER'] = function(msg)
+    GM2_DbBrowser.Window.Frame:Show()
+end
+
 GM2_DbBrowser = {}
 GM2_DbBrowser.__index = GM2_DbBrowser
 
@@ -35,6 +40,7 @@ function GM2_DbBrowser:Initialize()
     self.Window.Header:SetHeight(20)
     self.Window.Header:SetText('To view GatherMate2 data select a database using the dropdown menu')
 
+    -- ** keeping this here for now, as features grow a better ui will be needed for database tools etc
     -- self.Window.SearchFrame = CreateFrame('FRAME', 'GatherMate2_DbBrowserSearchFrame', self.Window.Frame)
     -- self.Window.SearchFrame:SetPoint('TOPLEFT', 18, -75)
     -- self.Window.SearchFrame:SetSize(380, 65)
@@ -50,10 +56,9 @@ function GM2_DbBrowser:Initialize()
     -- self.Window.SearchFrameHeader:SetJustifyH('LEFT')
     -- self.Window.SearchFrameHeader:SetText('Search')
 
-    --self.Window.
 
     -- map zone sort button asc/desc
-    self.Window.MapZoneButton = CreateFrame('BUTTON', 'GatherMate2_DbBrowserDatabaseMapZoneButton', self.Window.Frame, "UIPanelButtonTemplate")
+    self.Window.MapZoneButton = CreateFrame('BUTTON', 'GatherMate2_DbBrowserMapZoneButton', self.Window.Frame, "UIPanelButtonTemplate")
     self.Window.MapZoneButton:SetPoint('TOPLEFT', self.Window.Frame, 'TOPLEFT', 10, -70)
     self.Window.MapZoneButton:SetSize(250, 22)
     self.Window.MapZoneButton:SetText('Map Zone')
@@ -104,7 +109,7 @@ function GM2_DbBrowser:Initialize()
         end
     end)
     -- source button asc/desc
-    self.Window.SourceButton = CreateFrame('BUTTON', 'GatherMate2_DbBrowserDatabaseSourceButton', self.Window.Frame, "UIPanelButtonTemplate")
+    self.Window.SourceButton = CreateFrame('BUTTON', 'GatherMate2_DbBrowserSourceButton', self.Window.Frame, "UIPanelButtonTemplate")
     self.Window.SourceButton:SetPoint('LEFT', self.Window.MapZoneButton, 'RIGHT', 0, 0)
     self.Window.SourceButton:SetSize(250, 22)
     self.Window.SourceButton:SetText('Source')
@@ -155,14 +160,14 @@ function GM2_DbBrowser:Initialize()
         end
     end)
 
-    self.Window.SearchBox = CreateFrame('EditBox', 'GatherMate2_DbBrowser', self.Window.Frame, "InputBoxTemplate")
+    self.Window.SearchBox = CreateFrame('EditBox', 'GatherMate2_DbBrowserSearchBox', self.Window.Frame, "InputBoxTemplate")
     self.Window.SearchBox:SetPoint('LEFT', self.Window.SourceButton, 'RIGHT', 6, 0)
     self.Window.SearchBox:SetFontObject('GameFontNormal')
     self.Window.SearchBox:SetSize(134, 20)
     self.Window.SearchBox:SetAutoFocus(false)
-    self.Window.SearchBox:Insert('search term')
+    self.Window.SearchBox:Insert('Search term')
     self.Window.SearchBox:SetScript('OnTextChanged', function(self)
-        if self:GetText():len() > 0 then
+        if self:GetText():len() > 0 and next(GM2_DbBrowser.DataSet) then
             GM2_DbBrowser:FilterDatabaseResults(self:GetText())
         else
             GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet)
@@ -181,7 +186,7 @@ function GM2_DbBrowser:Initialize()
             info.isTitle = false
             info.notCheckable = true
             info.func = function(self)
-                -- get better 
+                --GM2_DbBrowser.Window.SearchBox:SetText('Search term')
                 GM2_DbBrowser.DataSet = wipe(GM2_DbBrowser.DataSet)
                 GM2_DbBrowser.DataSet_Filtered = wipe(GM2_DbBrowser.DataSet_Filtered)
                 GM2_DbBrowser:LoadDatabase(db, name)
@@ -199,8 +204,8 @@ function GM2_DbBrowser:Initialize()
         RowHeight = 21.0,
         RowOffsetY = 19.0,
         Rows = {},
-        HoverColour = {0.1,0.8,0.3,0.3},
-        SelectedColour = {0.4,0.73,1.0,0.3},
+        HoverColour = {0.1,0.6,0.3,0.2},
+        SelectedColour = {0.4,0.73,1.0,0.2},
         BackgroundColour_Odd = {0.2,0.2,0.2,0.3},
         BackgroundColour_Even = {0.2,0.2,0.2,0.1},
     }
@@ -232,7 +237,7 @@ function GM2_DbBrowser:Initialize()
             GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet_Filtered)
         end
     end)
-    -- no clue why but this works for getting values set, OnLoad didnt seem to fire and OnShow required hiding and re-showing ?
+    -- no clue why but this works for getting values set, OnLoad didnt seem to fire (i know it must do but.....) and OnShow required hiding and re-showing ?
     self.Window.ListView.ScrollBar:Hide()
     self.Window.ListView.ScrollBar:Show()
     -- set up mouse scroll script
@@ -307,7 +312,13 @@ function GM2_DbBrowser:Initialize()
         row:SetScript('OnEnter', function(self)
             self.Background:SetColorTexture(unpack(GM2_DbBrowser.Window.ListView.HoverColour))
             for k, fontString in pairs({ self.MapZoneText, self.SourceText, self.LocationText }) do
-                fontString:SetTextColor(1,1,1,1)
+                if self.data and self.data.Selected then
+                    --fontString:SetTextColor(1,1,1,1)
+                    fontString:SetTextColor(1.0, 0.82, 0.0, 1.0)
+                else
+                    --fontString:SetTextColor(1.0, 0.82, 0.0, 1.0)
+                    fontString:SetTextColor(1,1,1,1)
+                end
             end
         end)
 
@@ -321,16 +332,20 @@ function GM2_DbBrowser:Initialize()
     self:SetMovable()
 end
 
+--GatherMate:RemoveNodeByID(zone, nodeType, coord) zone=map id, nodeType=internal db name('Mining' or 'Fishing' etc), coord=encoded position
+
 function GM2_DbBrowser:UpdateRowBackground(row)
     if row.data then
         if row.data.Selected then
             row.Background:SetColorTexture(unpack(self.Window.ListView.SelectedColour))
             for k, fontString in pairs({ row.MapZoneText, row.SourceText, row.LocationText }) do
-                fontString:SetTextColor(1,1,1,1)
+                --fontString:SetTextColor(1,1,1,1)
+                fontString:SetTextColor(1.0, 0.82, 0.0, 1.0)
             end
         else
             for k, fontString in pairs({ row.MapZoneText, row.SourceText, row.LocationText }) do
-                fontString:SetTextColor(1.0, 0.82, 0.0, 1.0)
+                --fontString:SetTextColor(1.0, 0.82, 0.0, 1.0)
+                fontString:SetTextColor(1,1,1,1)
             end
             if row.id % 2 == 0 then
                 row.Background:SetColorTexture(unpack(self.Window.ListView.BackgroundColour_Even))
@@ -435,6 +450,9 @@ function GM2_DbBrowser:LoadDatabase(database, nodeType)
             end
         end)
         local len = #self.DataSet
+        if tonumber(len) < 20.0 then
+            len = 20.0
+        end
         self.Window.ListView.ScrollBar:SetMinMaxValues(1, (len - (self.Window.ListView.NumRows - 1)))
     else
         self.DataSet = {}
