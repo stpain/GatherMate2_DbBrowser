@@ -1,6 +1,6 @@
 ## Interface: 80300
 ## Author: stpain
-## Version: 0.0.1
+## Version: 0.0.2
 ## Title: |cffA9D271GatherMate2|r database viewer
 ## Notes: A simple database viewer for GatherMate2
 ## Dependencies: GatherMate2
