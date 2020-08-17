@@ -15,8 +15,8 @@ function GM2_DbBrowser:Initialize()
     -- create ui table
     self.Window = {}
     -- create ui
-    self.Window.Frame = CreateFrame('FRAME', 'GatherMate2DatabaseViewer', UIParent, "UIPanelDialogTemplate")
-    self.Window.Frame:SetSize(800, 570)
+    self.Window.Frame = CreateFrame('FRAME', 'GatherMate2_DbBrowser', UIParent, "UIPanelDialogTemplate")
+    self.Window.Frame:SetSize(800, 525)
     self.Window.Frame:SetPoint('CENTER', 0, 0)
     self.Window.Frame:SetScript('OnShow', function(self)
         if next(GM2_DbBrowser.DataSet) then
@@ -29,30 +29,32 @@ function GM2_DbBrowser:Initialize()
     self.Window.Title:SetPoint('TOP', 0, -9)
     self.Window.Title:SetText('GatherMate2 Database Viewer')
 
+    self.Window.Header = self.Window.Frame:CreateFontString('$parentTitle', 'OVERLAY', 'GameFontNormal')
+    self.Window.Header:SetPoint('TOPLEFT', 8, -29)
+    self.Window.Header:SetPoint('TOPRIGHT', -8, -29)
+    self.Window.Header:SetHeight(20)
+    self.Window.Header:SetText('To view GatherMate2 data select a database using the dropdown menu')
 
-    -- drop down menu to select gm2 db
-    self.Window.DatabaseSelectionDropDown = CreateFrame('FRAME', 'GatherMate2DatabaseViewerDatabaseSelectionDropDown', self.Window.Frame, "UIDropDownMenuTemplate")
-    self.Window.DatabaseSelectionDropDown:SetPoint('TOPRIGHT', -16, -48)
-    UIDropDownMenu_SetWidth(self.Window.DatabaseSelectionDropDown, 125)
-    UIDropDownMenu_SetText(self.Window.DatabaseSelectionDropDown, 'Select database')
-    UIDropDownMenu_Initialize(self.Window.DatabaseSelectionDropDown, function()
-        local info = UIDropDownMenu_CreateInfo()
-        for name, db in pairs(GatherMate.gmdbs) do
-            info.text = name
-            info.isTitle = false
-            info.notCheckable = true
-            info.func = function(self)
-                GM2_DbBrowser:ClearListView()
-                GM2_DbBrowser:LoadDatabase(db, name)
-                GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet)
-                UIDropDownMenu_SetText(GM2_DbBrowser.Window.DatabaseSelectionDropDown, name)
-            end
-            UIDropDownMenu_AddButton(info)
-        end
-    end)
+    -- self.Window.SearchFrame = CreateFrame('FRAME', 'GatherMate2_DbBrowserSearchFrame', self.Window.Frame)
+    -- self.Window.SearchFrame:SetPoint('TOPLEFT', 18, -75)
+    -- self.Window.SearchFrame:SetSize(380, 65)
+    -- --self.Window.SearchFrame:SetPoint('BOTTOMRIGHT', self.Window.Frame, 'TOPRIGHT', -18, -145)
+    -- self.Window.SearchFrame:SetBackdrop({ --bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+    --     edgeFile = "Interface/Tooltips/UI-Tooltip-Border", 
+    --     tile = true, tileSize = 16, edgeSize = 16, 
+    --     insets = { left = 4, right = 4, top = 4, bottom = 4 }
+    -- })
+    -- self.Window.SearchFrameHeader = self.Window.Frame:CreateFontString('$parentSearchFrameHeader', 'OVERLAY', 'GameFontNormal')
+    -- self.Window.SearchFrameHeader:SetPoint('BOTTOMLEFT', self.Window.SearchFrame, 'TOPLEFT', 4, 0)
+    -- self.Window.SearchFrameHeader:SetWidth(100)
+    -- self.Window.SearchFrameHeader:SetJustifyH('LEFT')
+    -- self.Window.SearchFrameHeader:SetText('Search')
+
+    --self.Window.
+
     -- map zone sort button asc/desc
-    self.Window.MapZoneButton = CreateFrame('BUTTON', 'GatherMate2DatabaseViewerDatabaseMapZoneButton', self.Window.Frame, "UIPanelButtonTemplate")
-    self.Window.MapZoneButton:SetPoint('TOPLEFT', self.Window.Frame, 'TOPLEFT', 10, -115)
+    self.Window.MapZoneButton = CreateFrame('BUTTON', 'GatherMate2_DbBrowserDatabaseMapZoneButton', self.Window.Frame, "UIPanelButtonTemplate")
+    self.Window.MapZoneButton:SetPoint('TOPLEFT', self.Window.Frame, 'TOPLEFT', 10, -70)
     self.Window.MapZoneButton:SetSize(250, 22)
     self.Window.MapZoneButton:SetText('Map Zone')
     self.Window.MapZoneButton.sort = 0
@@ -102,7 +104,7 @@ function GM2_DbBrowser:Initialize()
         end
     end)
     -- source button asc/desc
-    self.Window.SourceButton = CreateFrame('BUTTON', 'GatherMate2DatabaseViewerDatabaseSourceButton', self.Window.Frame, "UIPanelButtonTemplate")
+    self.Window.SourceButton = CreateFrame('BUTTON', 'GatherMate2_DbBrowserDatabaseSourceButton', self.Window.Frame, "UIPanelButtonTemplate")
     self.Window.SourceButton:SetPoint('LEFT', self.Window.MapZoneButton, 'RIGHT', 0, 0)
     self.Window.SourceButton:SetSize(250, 22)
     self.Window.SourceButton:SetText('Source')
@@ -152,71 +154,63 @@ function GM2_DbBrowser:Initialize()
             self.sort = 0
         end
     end)
-    -- location button asc/desc ? might remove feature
-    self.Window.LocationButton = CreateFrame('BUTTON', 'GatherMate2DatabaseViewerDatabaseLocationButton', self.Window.Frame, "UIPanelButtonTemplate")
-    self.Window.LocationButton:SetPoint('LEFT', self.Window.SourceButton, 'RIGHT', 0, 0)
-    self.Window.LocationButton:SetSize(150, 22)
-    self.Window.LocationButton:SetText('Location')
-    self.Window.LocationButton.sort = 0
-    self.Window.LocationButton:SetScript('OnClick', function(self)
-        if self.sort == 0 then
-            if not next(GM2_DbBrowser.DataSet_Filtered) then
-                table.sort(GM2_DbBrowser.DataSet, function(a, b)
-                    if a.PosY == b.PosY then
-                        return a.PosX < b.PosX
-                    else
-                        return (a.PosY > b.PosY) -- and (a.PosX > b.PosX)
-                    end
-                end)
-                GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet)
-            else
-                table.sort(GM2_DbBrowser.DataSet_Filtered, function(a, b)
-                    if a.PosY == b.PosY then
-                        return a.PosX < b.PosX
-                    else
-                        return (a.PosY > b.PosY) -- and (a.PosX > b.PosX)
-                    end
-                end)
-                GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet_Filtered)
-            end
-            self.sort = 1
+
+    self.Window.SearchBox = CreateFrame('EditBox', 'GatherMate2_DbBrowser', self.Window.Frame, "InputBoxTemplate")
+    self.Window.SearchBox:SetPoint('LEFT', self.Window.SourceButton, 'RIGHT', 6, 0)
+    self.Window.SearchBox:SetFontObject('GameFontNormal')
+    self.Window.SearchBox:SetSize(134, 20)
+    self.Window.SearchBox:SetAutoFocus(false)
+    self.Window.SearchBox:Insert('search term')
+    self.Window.SearchBox:SetScript('OnTextChanged', function(self)
+        if self:GetText():len() > 0 then
+            GM2_DbBrowser:FilterDatabaseResults(self:GetText())
         else
-            if not next(GM2_DbBrowser.DataSet_Filtered) then
-                table.sort(GM2_DbBrowser.DataSet, function(a, b)
-                    if a.PosY == b.PosY then
-                        return a.PosX < b.PosX
-                    else
-                        return (a.PosY < b.PosY) -- and (a.PosX < b.PosX)
-                    end
-                end)
-                GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet)
-            else
-                table.sort(GM2_DbBrowser.DataSet_Filtered, function(a, b)
-                    if a.PosY == b.PosY then
-                        return a.PosX < b.PosX
-                    else
-                        return (a.PosY < b.PosY) -- and (a.PosX < b.PosX)
-                    end
-                end)
-                GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet_Filtered)
-            end
-            self.sort = 0
+            GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet)
         end
     end)
+
+    -- drop down menu to select gm2 db
+    self.Window.DatabaseSelectionDropDown = CreateFrame('FRAME', 'GatherMate2_DbBrowserDatabaseSelectionDropDown', self.Window.Frame, "UIDropDownMenuTemplate")
+    self.Window.DatabaseSelectionDropDown:SetPoint('LEFT', self.Window.SearchBox, 'RIGHT', -15, 0)
+    UIDropDownMenu_SetWidth(self.Window.DatabaseSelectionDropDown, 125)
+    UIDropDownMenu_SetText(self.Window.DatabaseSelectionDropDown, 'Select database')
+    UIDropDownMenu_Initialize(self.Window.DatabaseSelectionDropDown, function()
+        local info = UIDropDownMenu_CreateInfo()
+        for name, db in pairs(GatherMate.gmdbs) do
+            info.text = name
+            info.isTitle = false
+            info.notCheckable = true
+            info.func = function(self)
+                -- get better 
+                GM2_DbBrowser.DataSet = wipe(GM2_DbBrowser.DataSet)
+                GM2_DbBrowser.DataSet_Filtered = wipe(GM2_DbBrowser.DataSet_Filtered)
+                GM2_DbBrowser:LoadDatabase(db, name)
+                GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet)
+                UIDropDownMenu_SetText(GM2_DbBrowser.Window.DatabaseSelectionDropDown, name)
+            end
+            UIDropDownMenu_AddButton(info)
+        end
+    end)
+
+
     -- listview table
     self.Window.ListView = {
         NumRows = 20.0,
         RowHeight = 21.0,
         RowOffsetY = 19.0,
         Rows = {},
+        HoverColour = {0.1,0.8,0.3,0.3},
+        SelectedColour = {0.4,0.73,1.0,0.3},
+        BackgroundColour_Odd = {0.2,0.2,0.2,0.3},
+        BackgroundColour_Even = {0.2,0.2,0.2,0.1},
     }
     -- create listview frame/area
-    self.Window.ListView.Frame = CreateFrame('FRAME', 'GatherMate2DatabaseViewerListView', self.Window.Frame)
-    self.Window.ListView.Frame:SetPoint('TOPLEFT', self.Window.Frame, 'TOPLEFT', 12, -138)
+    self.Window.ListView.Frame = CreateFrame('FRAME', 'GatherMate2_DbBrowserListView', self.Window.Frame)
+    self.Window.ListView.Frame:SetPoint('TOPLEFT', self.Window.Frame, 'TOPLEFT', 12, -93)
     self.Window.ListView.Frame:SetPoint('BOTTOMRIGHT', self.Window.Frame, 'BOTTOMRIGHT', -8, 12)
     self.Window.ListView.Frame:EnableMouse(true)
     -- listview scroll bar, needs artwork?
-    self.Window.ListView.ScrollBar = CreateFrame('SLIDER', 'GatherMate2DatabaseViewerListViewScrollBar', self.Window.ListView.Frame, "UIPanelScrollBarTemplate")
+    self.Window.ListView.ScrollBar = CreateFrame('SLIDER', 'GatherMate2_DbBrowserListViewScrollBar', self.Window.ListView.Frame, "UIPanelScrollBarTemplate")
     self.Window.ListView.ScrollBar:SetPoint('TOPLEFT', self.Window.ListView.Frame, 'TOPRIGHT', -16, -16)
     self.Window.ListView.ScrollBar:SetPoint('BOTTOMRIGHT', self.Window.ListView.Frame, 'BOTTOMRIGHT', 0, 16)
     self.Window.ListView.ScrollBar:EnableMouse(true)
@@ -248,15 +242,18 @@ function GM2_DbBrowser:Initialize()
     end)
     -- draw listview rows
     for i = 1, self.Window.ListView.NumRows do
-        local row = CreateFrame('FRAME', tostring('GatherMate2DatabaseViewerListViewRow'..i), self.Window.ListView.Frame)
+        local row = CreateFrame('FRAME', tostring('GatherMate2_DbBrowserListViewRow'..i), self.Window.ListView.Frame)
         row:SetPoint('TOPLEFT', self.Window.ListView.Frame, 'TOPLEFT', 0, ((i - 1) * self.Window.ListView.RowHeight) * -1)
         row:SetPoint('BOTTOMRIGHT', self.Window.ListView.Frame, 'TOPRIGHT', -16, (((i - 1) * self.Window.ListView.RowHeight) + self.Window.ListView.RowOffsetY) * -1)
         row.Background = row:CreateTexture('$parentBackgorund', 'BACKGROUND')
         row.Background:SetAllPoints(row)
-        if i % 2 == 0 then
-            row.Background:SetColorTexture(0.2,0.2,0.2,0.1)
+
+        row.id = i
+
+        if row.id % 2 == 0 then
+            row.Background:SetColorTexture(unpack(GM2_DbBrowser.Window.ListView.BackgroundColour_Even))
         else
-            row.Background:SetColorTexture(0.2,0.2,0.2,0.3)
+            row.Background:SetColorTexture(unpack(GM2_DbBrowser.Window.ListView.BackgroundColour_Odd))
         end
 
         row.MapZoneText = row:CreateFontString('$parentMapZoneText', 'OVERLAY', 'GameFontNormal')
@@ -272,25 +269,51 @@ function GM2_DbBrowser:Initialize()
         row.LocationText = row:CreateFontString('$parentLocationText', 'OVERLAY', 'GameFontNormal')
         row.LocationText:SetPoint('LEFT', 502, 0)
 
-        --row.
+        row.data = {}
+
+        row:SetScript('OnShow', function(self)
+            if self.data then
+                self.MapZoneText:SetText(self.data.MapZone)
+                self.SourceIcon:SetTexture(self.data.Texture)
+                self.SourceText:SetText(self.data.Source)
+                local x = string.format("%.4f", self.data.PosX)
+                local y = string.format("%.4f", self.data.PosY)
+                self.LocationText:SetText(string.format('x %s : y %s', x, y))
+            else
+                self.MapZoneText:SetText(' ')
+                self.SourceIcon:SetTexture(nil)
+                self.SourceText:SetText(' ')
+                self.LocationText:SetText(' ')
+            end
+            GM2_DbBrowser:UpdateRowBackground(self)
+        end)
+
+        row:SetScript('OnHide', function(self)
+            self.MapZoneText:SetText(' ')
+            self.SourceIcon:SetTexture(nil)
+            self.SourceText:SetText(' ')
+            self.LocationText:SetText(' ')
+        end)
+
+        row:SetScript('OnMouseUp', function(self, button)
+            if button == 'LeftButton' then
+                self.data.Selected = not self.data.Selected
+                GM2_DbBrowser:UpdateRowBackground(self)
+            else
+
+            end
+        end)
 
         row:SetScript('OnEnter', function(self)
-            row.Background:SetColorTexture(0.4,0.73,1.0,0.3)
+            self.Background:SetColorTexture(unpack(GM2_DbBrowser.Window.ListView.HoverColour))
             for k, fontString in pairs({ self.MapZoneText, self.SourceText, self.LocationText }) do
                 fontString:SetTextColor(1,1,1,1)
             end
         end)
-        row:SetScript('OnLeave', function(self)
-            if i % 2 == 0 then
-                row.Background:SetColorTexture(0.2,0.2,0.2,0.1)
-            else
-                row.Background:SetColorTexture(0.2,0.2,0.2,0.3)
-            end
-            for k, fontString in pairs({ self.MapZoneText, self.SourceText, self.LocationText }) do
-                fontString:SetTextColor(1.0, 0.82, 0.0, 1.0)
-            end
-        end)
 
+        row:SetScript('OnLeave', function(self)
+            GM2_DbBrowser:UpdateRowBackground(self)
+        end)
 
         self.Window.ListView.Rows[i] = row
     end
@@ -298,6 +321,31 @@ function GM2_DbBrowser:Initialize()
     self:SetMovable()
 end
 
+function GM2_DbBrowser:UpdateRowBackground(row)
+    if row.data then
+        if row.data.Selected then
+            row.Background:SetColorTexture(unpack(self.Window.ListView.SelectedColour))
+            for k, fontString in pairs({ row.MapZoneText, row.SourceText, row.LocationText }) do
+                fontString:SetTextColor(1,1,1,1)
+            end
+        else
+            for k, fontString in pairs({ row.MapZoneText, row.SourceText, row.LocationText }) do
+                fontString:SetTextColor(1.0, 0.82, 0.0, 1.0)
+            end
+            if row.id % 2 == 0 then
+                row.Background:SetColorTexture(unpack(self.Window.ListView.BackgroundColour_Even))
+            else
+                row.Background:SetColorTexture(unpack(self.Window.ListView.BackgroundColour_Odd))
+            end
+        end
+    else
+        if row.id % 2 == 0 then
+            row.Background:SetColorTexture(unpack(self.Window.ListView.BackgroundColour_Even))
+        else
+            row.Background:SetColorTexture(unpack(self.Window.ListView.BackgroundColour_Odd))
+        end
+    end
+end
 
 function GM2_DbBrowser:SetMovable()
     self.Window.Frame:SetMovable(true)
@@ -313,14 +361,34 @@ end
 
 
 function GM2_DbBrowser:ClearListView()
-    for k, v in ipairs(self.Window.ListView.Rows) do
-        v.MapZoneText:SetText('')
-        v.SourceIcon:SetTexture('')
-        v.SourceText:SetText('')
-        v.LocationText:SetText('')
+    for i = 1, 20 do
+        if self.Window.ListView.Rows[i] then
+            self.Window.ListView.Rows[i]:Hide()
+            self.Window.ListView.Rows[i].data = nil
+            self.Window.ListView.Rows[i]:Show()
+        end
     end
 end
 
+-- this works for now but there is probably a better way to do instead of creating a new table for each keypress in the search box
+-- also has a bonus side effect of return a full data set in search box is empty
+function GM2_DbBrowser:FilterDatabaseResults(filter)
+    if next(self.DataSet) then
+        --self.DataSet_Filtered = {} -- make a better wipe/delete func
+        wipe(GM2_DbBrowser.DataSet_Filtered)
+        for k, node in ipairs(self.DataSet) do
+            if node.Source:lower():find(filter:lower()) or node.MapZone:lower():find(filter:lower()) then
+                table.insert(self.DataSet_Filtered, node)
+            end
+        end
+        local len = #self.DataSet_Filtered
+        if tonumber(len) < 20.0 then
+            len = 20.0
+        end
+        self.Window.ListView.ScrollBar:SetMinMaxValues(1, (len - (self.Window.ListView.NumRows - 1)))
+        self:RefreshListView(self.DataSet_Filtered)
+    end
+end
 
 function GM2_DbBrowser:RefreshListView(data)
     self:ClearListView()
@@ -328,12 +396,9 @@ function GM2_DbBrowser:RefreshListView(data)
         local scrollPos = math.floor(self.Window.ListView.ScrollBar:GetValue())
         for i = 1, 20 do
             if data[(i - 1) + scrollPos] then
-                self.Window.ListView.Rows[i].MapZoneText:SetText(data[(i - 1) + scrollPos].MapZone)
-                self.Window.ListView.Rows[i].SourceIcon:SetTexture(data[(i - 1) + scrollPos].Texture)
-                self.Window.ListView.Rows[i].SourceText:SetText(data[(i - 1) + scrollPos].Source)
-                local x = string.format("%.4f", data[(i - 1) + scrollPos].PosX)
-                local y = string.format("%.4f", data[(i - 1) + scrollPos].PosY)
-                self.Window.ListView.Rows[i].LocationText:SetText(string.format('x %s : y %s', x, y))
+                self.Window.ListView.Rows[i]:Hide()
+                self.Window.ListView.Rows[i].data = data[(i - 1) + scrollPos]
+                self.Window.ListView.Rows[i]:Show()
             end
         end
     end
@@ -351,12 +416,14 @@ function GM2_DbBrowser:LoadDatabase(database, nodeType)
                 local expansionInfo = GetExpansionDisplayInfo(expansionID)
                 local texture = GatherMate.nodeTextures[nodeType][id]
                 table.insert(self.DataSet, {
+                    -- node fields
                     MapZone = map,
                     Source = node,
                     PosX = x,
                     PosY = y,
                     Texture = texture,
-                    --ExpansionLogo = expansionInfo.logo,
+                    -- listview fields
+                    Selected = false,
                 })
             end
         end
@@ -377,7 +444,7 @@ end
 GM2_DbBrowser.EventsFrame = CreateFrame('FRAME', 'GM2_DbBrowser_EventsFrame', UIParent)
 GM2_DbBrowser.EventsFrame:RegisterEvent('ADDON_LOADED')
 GM2_DbBrowser.EventsFrame:SetScript('OnEvent', function(self, event, addon)
-    if event == 'ADDON_LOADED' and addon:lower() == 'gathermate2_dbviewer' then
+    if event == 'ADDON_LOADED' and addon:lower() == 'gathermate2_dbbrowser' then
         GatherMate = _G["GatherMate2"]
         if GatherMate then
             GM2_DbBrowser:Initialize()
