@@ -15,6 +15,7 @@ local GatherMate = false
 -- set up addon
 function GM2_DbBrowser:Initialize()
     -- create tables for gm2 db data
+    self.SelectedDatabaseInfo = {}
     self.DataSet = {}
     self.DataSet_Filtered = {}
     -- create ui table
@@ -25,6 +26,9 @@ function GM2_DbBrowser:Initialize()
     self.Window.Frame:SetPoint('CENTER', 0, 0)
     self.Window.Frame:SetScript('OnShow', function(self)
         if next(GM2_DbBrowser.DataSet) then
+            if next(GM2_DbBrowser.SelectedDatabaseInfo) then
+                GM2_DbBrowser:LoadDatabase(GM2_DbBrowser.SelectedDatabaseInfo.DB, GM2_DbBrowser.SelectedDatabaseInfo.Name)
+            end
             GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet)
         else
             GM2_DbBrowser:ClearListView()
@@ -187,6 +191,7 @@ function GM2_DbBrowser:Initialize()
             info.notCheckable = true
             info.func = function(self)
                 --GM2_DbBrowser.Window.SearchBox:SetText('Search term')
+                GM2_DbBrowser.SelectedDatabaseInfo = {Name=name, DB=db}
                 GM2_DbBrowser.DataSet = wipe(GM2_DbBrowser.DataSet)
                 GM2_DbBrowser.DataSet_Filtered = wipe(GM2_DbBrowser.DataSet_Filtered)
                 GM2_DbBrowser:LoadDatabase(db, name)
@@ -222,10 +227,11 @@ function GM2_DbBrowser:Initialize()
     self.Window.ListView.ScrollBar:SetScript('OnShow', function(self)
         if next(GM2_DbBrowser.DataSet) then
             local len = #GM2_DbBrowser.DataSet
-            if tonumber(len) < 20.0 then
-                len = 20.0
+            if tonumber(len) <= 20.0 then
+                self:SetMinMaxValues(1, 1)
+            else
+                self:SetMinMaxValues(1, (len - (GM2_DbBrowser.Window.ListView.NumRows - 1)))
             end
-            self:SetMinMaxValues(1, (len - GM2_DbBrowser.Window.ListView.NumRows - 1))
         else
             self:SetMinMaxValues(1, GM2_DbBrowser.Window.ListView.NumRows)
         end
@@ -304,11 +310,14 @@ function GM2_DbBrowser:Initialize()
         end)
 
         row:SetScript('OnMouseUp', function(self, button)
-            if button == 'LeftButton' then
-                self.data.Selected = not self.data.Selected
-                GM2_DbBrowser:UpdateRowBackground(self)
-            else
-
+            if self.data then
+                if button == 'LeftButton' then
+                    self.data.Selected = not self.data.Selected
+                    GM2_DbBrowser:UpdateRowBackground(self)
+                elseif button == 'RightButton' then
+                    --print('deleted', self.data.NodeType, self.data.MapZoneID, self.data.Coords)
+                    --GatherMate:RemoveNodeByID(self.data.MapZoneID, self.data.NodeType, self.data.Coords)
+                end
             end
         end)
 
@@ -400,10 +409,11 @@ function GM2_DbBrowser:FilterDatabaseResults(filter)
             end
         end
         local len = #self.DataSet_Filtered
-        if tonumber(len) < 20.0 then
-            len = 20.0
+        if tonumber(len) <= 20.0 then
+            self.Window.ListView.ScrollBar:SetMinMaxValues(1, 1)
+        else
+            self.Window.ListView.ScrollBar:SetMinMaxValues(1, (len - (GM2_DbBrowser.Window.ListView.NumRows - 1)))
         end
-        self.Window.ListView.ScrollBar:SetMinMaxValues(1, (len - (self.Window.ListView.NumRows - 1)))
         self:RefreshListView(self.DataSet_Filtered)
     end
 end
@@ -435,7 +445,10 @@ function GM2_DbBrowser:LoadDatabase(database, nodeType)
                 local texture = GatherMate.nodeTextures[nodeType][id]
                 table.insert(self.DataSet, {
                     -- node fields
+                    NodeType = nodeType,
                     MapZone = map,
+                    MapZoneID = zone,
+                    Coords = coords,
                     Source = node,
                     PosX = x,
                     PosY = y,
@@ -453,10 +466,12 @@ function GM2_DbBrowser:LoadDatabase(database, nodeType)
             end
         end)
         local len = #self.DataSet
-        if tonumber(len) < 20.0 then
-            len = 20.0
+        if tonumber(len) <= 20.0 then
+            self.Window.ListView.ScrollBar:SetMinMaxValues(1, 1)
+        else
+            self.Window.ListView.ScrollBar:SetMinMaxValues(1, (len - (GM2_DbBrowser.Window.ListView.NumRows - 1)))
         end
-        self.Window.ListView.ScrollBar:SetMinMaxValues(1, (len - (self.Window.ListView.NumRows - 1)))
+        print(string.format('returned %s results from db', len))
     else
         self.DataSet = {}
     end
