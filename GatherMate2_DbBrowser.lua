@@ -1,5 +1,5 @@
 
-local addonName, addon = ...
+local addonName, GM2_DBB = ...
 
 SLASH_GATHERMATE2_DBBROWSER1 = '/gm2dbb'
 SlashCmdList['GATHERMATE2_DBBROWSER'] = function(msg)
@@ -11,15 +11,22 @@ GM2_DbBrowser.__index = GM2_DbBrowser
 
 -- use this to check gathermate2 is loaded and usable
 local GatherMate = false
+local contextMenuSep = "|TInterface/COMMON/UI-TooltipDivider:8:150|t"
 
 -- set up addon
 function GM2_DbBrowser:Initialize()
+    -- context menu stuff
+    self.ContextMenu_DropDown = CreateFrame("Frame", "SimpleCooldownsSpellButtonContextMenu", UIParent, "UIDropDownMenuTemplate")
+    self.ContextMenu = {}
+
     -- create tables for gm2 db data
     self.SelectedDatabaseInfo = {}
     self.DataSet = {}
     self.DataSet_Filtered = {}
+
     -- create ui table
     self.Window = {}
+
     -- create ui
     self.Window.Frame = CreateFrame('FRAME', 'GatherMate2_DbBrowser', UIParent, "UIPanelDialogTemplate")
     self.Window.Frame:SetSize(800, 525)
@@ -39,10 +46,11 @@ function GM2_DbBrowser:Initialize()
     self.Window.Title:SetText('GatherMate2 Database Viewer')
 
     self.Window.Header = self.Window.Frame:CreateFontString('$parentTitle', 'OVERLAY', 'GameFontNormal')
-    self.Window.Header:SetPoint('TOPLEFT', 8, -29)
-    self.Window.Header:SetPoint('TOPRIGHT', -8, -29)
-    self.Window.Header:SetHeight(20)
-    self.Window.Header:SetText('To view GatherMate2 data select a database using the dropdown menu')
+    self.Window.Header:SetPoint('TOPLEFT', 8, -34)
+    self.Window.Header:SetPoint('TOPRIGHT', -8, -34)
+    self.Window.Header:SetSize(GM2_DbBrowser.Window.Frame:GetWidth() - 16, 30)
+    self.Window.Header:SetText('To view GatherMate2 data select a database using the dropdown menu. To search for gathering information within a database, right click a column button for filter options or enter a search term.')
+    self.Window.Header:SetTextColor(1,1,1,1)
 
     -- ** keeping this here for now, as features grow a better ui will be needed for database tools etc
     -- self.Window.SearchFrame = CreateFrame('FRAME', 'GatherMate2_DbBrowserSearchFrame', self.Window.Frame)
@@ -67,49 +75,54 @@ function GM2_DbBrowser:Initialize()
     self.Window.MapZoneButton:SetSize(250, 22)
     self.Window.MapZoneButton:SetText('Map Zone')
     self.Window.MapZoneButton.sort = 0
-    self.Window.MapZoneButton:SetScript('OnClick', function(self)
-        if self.sort == 0 then
-            if not next(GM2_DbBrowser.DataSet_Filtered) then
-                table.sort(GM2_DbBrowser.DataSet, function(a, b)
-                    if a.MapZone == b.MapZone then
-                        return a.Source < b.Source
-                    else
-                        return a.MapZone > b.MapZone
-                    end
-                end)
-                GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet)
-            else
-                table.sort(GM2_DbBrowser.DataSet_Filtered, function(a, b)
-                    if a.MapZone == b.MapZone then
-                        return a.Source < b.Source
-                    else
-                        return a.MapZone > b.MapZone
-                    end
-                end)
-                GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet_Filtered)
-            end
-            self.sort = 1
+    self.Window.MapZoneButton:RegisterForClicks('AnyUp')
+    self.Window.MapZoneButton:SetScript('OnClick', function(self, button)
+        if button == 'RightButton' then
+            GM2_DbBrowser:OpenMapZoneContextMenu()
         else
-            if not next(GM2_DbBrowser.DataSet_Filtered) then
-                table.sort(GM2_DbBrowser.DataSet, function(a, b)
-                    if a.MapZone == b.MapZone then
-                        return a.Source < b.Source
-                    else
-                        return a.MapZone < b.MapZone
-                    end
-                end)
-                GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet)
+            if self.sort == 0 then
+                if not next(GM2_DbBrowser.DataSet_Filtered) then
+                    table.sort(GM2_DbBrowser.DataSet, function(a, b)
+                        if a.MapZoneName == b.MapZoneName then
+                            return a.Source < b.Source
+                        else
+                            return a.MapZoneName > b.MapZoneName
+                        end
+                    end)
+                    GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet)
+                else
+                    table.sort(GM2_DbBrowser.DataSet_Filtered, function(a, b)
+                        if a.MapZoneName == b.MapZoneName then
+                            return a.Source < b.Source
+                        else
+                            return a.MapZoneName > b.MapZoneName
+                        end
+                    end)
+                    GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet_Filtered)
+                end
+                self.sort = 1
             else
-                table.sort(GM2_DbBrowser.DataSet_Filtered, function(a, b)
-                    if a.MapZone == b.MapZone then
-                        return a.Source < b.Source
-                    else
-                        return a.MapZone < b.MapZone
-                    end
-                end)
-                GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet_Filtered)
+                if not next(GM2_DbBrowser.DataSet_Filtered) then
+                    table.sort(GM2_DbBrowser.DataSet, function(a, b)
+                        if a.MapZoneName == b.MapZoneName then
+                            return a.Source < b.Source
+                        else
+                            return a.MapZoneName < b.MapZoneName
+                        end
+                    end)
+                    GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet)
+                else
+                    table.sort(GM2_DbBrowser.DataSet_Filtered, function(a, b)
+                        if a.MapZoneName == b.MapZoneName then
+                            return a.Source < b.Source
+                        else
+                            return a.MapZoneName < b.MapZoneName
+                        end
+                    end)
+                    GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet_Filtered)
+                end
+                self.sort = 0
             end
-            self.sort = 0
         end
     end)
     -- source button asc/desc
@@ -118,49 +131,54 @@ function GM2_DbBrowser:Initialize()
     self.Window.SourceButton:SetSize(250, 22)
     self.Window.SourceButton:SetText('Source')
     self.Window.SourceButton.sort = 0
-    self.Window.SourceButton:SetScript('OnClick', function(self)
-        if self.sort == 0 then
-            if not next(GM2_DbBrowser.DataSet_Filtered) then
-                table.sort(GM2_DbBrowser.DataSet, function(a, b)
-                    if a.Source == b.Source then
-                        return a.MapZone < b.MapZone
-                    else
-                        return a.Source > b.Source
-                    end
-                end)
-                GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet)
-            else
-                table.sort(GM2_DbBrowser.DataSet_Filtered, function(a, b)
-                    if a.Source == b.Source then
-                        return a.MapZone < b.MapZone
-                    else
-                        return a.Source > b.Source
-                    end
-                end)
-                GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet_Filtered)
-            end
-            self.sort = 1
+    self.Window.SourceButton:RegisterForClicks('AnyUp')
+    self.Window.SourceButton:SetScript('OnClick', function(self, button)
+        if button == 'RightButton' then
+            GM2_DbBrowser:OpenSourceContextMenu()
         else
-            if not next(GM2_DbBrowser.DataSet_Filtered) then
-                table.sort(GM2_DbBrowser.DataSet, function(a, b)
-                    if a.Source == b.Source then
-                        return a.MapZone < b.MapZone
-                    else
-                        return a.Source < b.Source
-                    end
-                end)
-                GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet)
+            if self.sort == 0 then
+                if not next(GM2_DbBrowser.DataSet_Filtered) then
+                    table.sort(GM2_DbBrowser.DataSet, function(a, b)
+                        if a.Source == b.Source then
+                            return a.MapZoneName < b.MapZoneName
+                        else
+                            return a.Source > b.Source
+                        end
+                    end)
+                    GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet)
+                else
+                    table.sort(GM2_DbBrowser.DataSet_Filtered, function(a, b)
+                        if a.Source == b.Source then
+                            return a.MapZoneName < b.MapZoneName
+                        else
+                            return a.Source > b.Source
+                        end
+                    end)
+                    GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet_Filtered)
+                end
+                self.sort = 1
             else
-                table.sort(GM2_DbBrowser.DataSet_Filtered, function(a, b)
-                    if a.Source == b.Source then
-                        return a.MapZone < b.MapZone
-                    else
-                        return a.Source < b.Source
-                    end
-                end)
-                GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet_Filtered)
+                if not next(GM2_DbBrowser.DataSet_Filtered) then
+                    table.sort(GM2_DbBrowser.DataSet, function(a, b)
+                        if a.Source == b.Source then
+                            return a.MapZoneName < b.MapZoneName
+                        else
+                            return a.Source < b.Source
+                        end
+                    end)
+                    GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet)
+                else
+                    table.sort(GM2_DbBrowser.DataSet_Filtered, function(a, b)
+                        if a.Source == b.Source then
+                            return a.MapZoneName < b.MapZoneName
+                        else
+                            return a.Source < b.Source
+                        end
+                    end)
+                    GM2_DbBrowser:RefreshListView(GM2_DbBrowser.DataSet_Filtered)
+                end
+                self.sort = 0
             end
-            self.sort = 0
         end
     end)
 
@@ -287,7 +305,7 @@ function GM2_DbBrowser:Initialize()
 
         row:SetScript('OnShow', function(self)
             if self.data then
-                self.MapZoneText:SetText(self.data.MapZone)
+                self.MapZoneText:SetText(self.data.MapZoneName)
                 self.SourceIcon:SetTexture(self.data.Texture)
                 self.SourceText:SetText(self.data.Source)
                 local x = string.format("%.4f", self.data.PosX)
@@ -315,6 +333,7 @@ function GM2_DbBrowser:Initialize()
                     self.data.Selected = not self.data.Selected
                     GM2_DbBrowser:UpdateRowBackground(self)
                 elseif button == 'RightButton' then
+                    GM2_DbBrowser:OpenRowContextMenu(self)
                     --print('deleted', self.data.NodeType, self.data.MapZoneID, self.data.Coords)
                     --GatherMate:RemoveNodeByID(self.data.MapZoneID, self.data.NodeType, self.data.Coords)
                 end
@@ -374,6 +393,129 @@ function GM2_DbBrowser:UpdateRowBackground(row)
     end
 end
 
+function GM2_DbBrowser:OpenMapZoneContextMenu()
+    if next(self.DataSet) then
+        local expansions = {}
+        local expansionsAdded = {}
+        local zonesAdded = {}
+        GM2_DbBrowser.ContextMenu = {
+            { text = 'Select zone', isTitle=true, notCheckable=true, },
+        }
+        table.sort(self.DataSet, function(a, b)
+            if a.ExpansionID == b.ExpansionID then
+                return a.MapZoneName < b.MapZoneName
+            else
+                return a.ExpansionID < b.ExpansionID
+            end
+        end)
+        for k, node in ipairs(self.DataSet) do
+            if not expansionsAdded[node.ExpansionName] then
+                expansionsAdded[node.ExpansionName] = true
+                table.insert(expansions, {
+                    ID = node.ExpansionID,
+                    Name = node.ExpansionName
+                })
+            end
+        end
+        for k, v in ipairs(expansions) do
+            local zones = {
+                { text = v.Name, isTitle=true, notCheckable=true },
+            }
+            for k, node in ipairs(self.DataSet) do
+                if tonumber(node.ExpansionID) == tonumber(v.ID) then
+                    if not zonesAdded[node.MapZoneName] then
+                        zonesAdded[node.MapZoneName] = true
+                        table.insert(zones, {
+                            text = node.MapZoneName,
+                            notCheckable = true,
+                            func = function(self)
+                                GM2_DbBrowser:FilterDatabaseResults(node.MapZoneName, true)
+                            end,
+                        })
+                    end
+                end
+            end
+            table.insert(GM2_DbBrowser.ContextMenu, {
+                text = v.Name,
+                isTitle = false,
+                notCheckable = true,
+                func = function(self)
+                    GM2_DbBrowser:FilterDatabaseResults(v.Name, true)
+                end,
+                hasArrow = true,
+                menuList = zones,
+            })
+        end
+        EasyMenu(GM2_DbBrowser.ContextMenu, GM2_DbBrowser.ContextMenu_DropDown, "cursor", 0 , 0, "MENU")
+    end
+end
+
+function GM2_DbBrowser:OpenSourceContextMenu()
+    if next(self.DataSet) then
+        local expansions = {}
+        local expansionsAdded = {}
+        local sourcesAdded = {}
+        GM2_DbBrowser.ContextMenu = {
+            { text = 'Select source', isTitle=true, notCheckable=true, },
+        }
+        table.sort(self.DataSet, function(a, b)
+            if a.ExpansionID == b.ExpansionID then
+                return a.Source < b.Source
+            else
+                return a.ExpansionID < b.ExpansionID
+            end
+        end)
+        for k, node in ipairs(self.DataSet) do
+            if not expansionsAdded[node.ExpansionName] then
+                expansionsAdded[node.ExpansionName] = true
+                table.insert(expansions, {
+                    ID = node.ExpansionID,
+                    Name = node.ExpansionName
+                })
+            end
+        end
+        for k, v in ipairs(expansions) do
+            local sources = {
+                { text = v.Name, isTitle=true, notCheckable=true },
+            }
+            for k, node in ipairs(self.DataSet) do
+                if tonumber(node.ExpansionID) == tonumber(v.ID) then
+                    if not sourcesAdded[node.Source] then
+                        sourcesAdded[node.Source] = true
+                        table.insert(sources, {
+                            text = node.Source,
+                            icon = node.Texture,
+                            notCheckable = true,
+                            func = function(self)
+                                GM2_DbBrowser:FilterDatabaseResults(node.Source, true)
+                            end,
+                        })
+                    end
+                end
+            end
+            table.insert(GM2_DbBrowser.ContextMenu, {
+                text = v.Name,
+                isTitle = false,
+                notCheckable = true,
+                func = function(self)
+                    GM2_DbBrowser:FilterDatabaseResults(v.Name, true)
+                end,
+                hasArrow = true,
+                menuList = sources,
+            })
+        end
+        EasyMenu(GM2_DbBrowser.ContextMenu, GM2_DbBrowser.ContextMenu_DropDown, "cursor", 0 , 0, "MENU")
+    end
+end
+
+function GM2_DbBrowser:OpenRowContextMenu(row)
+    self.ContextMenu = {
+        { text = 'Options', isTitle=true, notCheckable=true, },
+        { text = row.data.Source, notCheckable=true, icon = row.data.Texture, },
+    }
+    EasyMenu(self.ContextMenu, self.ContextMenu_DropDown, "cursor", 0 , 16, "MENU")
+end
+
 function GM2_DbBrowser:SetMovable()
     self.Window.Frame:SetMovable(true)
     self.Window.Frame:EnableMouse(true)
@@ -399,13 +541,22 @@ end
 
 -- this works for now but there is probably a better way to do instead of creating a new table for each keypress in the search box
 -- also has a bonus side effect of return a full data set in search box is empty
-function GM2_DbBrowser:FilterDatabaseResults(filter)
+function GM2_DbBrowser:FilterDatabaseResults(filter, exact)
+    filter = filter:lower()
     if next(self.DataSet) then
         --self.DataSet_Filtered = {} -- make a better wipe/delete func
         wipe(GM2_DbBrowser.DataSet_Filtered)
-        for k, node in ipairs(self.DataSet) do
-            if node.Source:lower():find(filter:lower()) or node.MapZone:lower():find(filter:lower()) then
-                table.insert(self.DataSet_Filtered, node)
+        if not exact then
+            for k, node in ipairs(self.DataSet) do
+                if node.source:find(filter) or node.mapZoneName:find(filter) or node.expansionName:find(filter) then
+                    table.insert(self.DataSet_Filtered, node)
+                end
+            end
+        else
+            for k, node in ipairs(self.DataSet) do
+                if node.source == filter or node.mapZoneName == filter or node.expansionName == filter then
+                    table.insert(self.DataSet_Filtered, node)
+                end
             end
         end
         local len = #self.DataSet_Filtered
@@ -440,29 +591,36 @@ function GM2_DbBrowser:LoadDatabase(database, nodeType)
                 local node = GatherMate:GetNameForNode(nodeType, id)
                 local x, y = GatherMate:DecodeLoc(coords)
                 local map = C_Map.GetMapInfo(zone).name
-                local expansionID = GatherMate.nodeExpansion[nodeType][id] - 1
-                local expansionInfo = GetExpansionDisplayInfo(expansionID)
+                local expID = GatherMate.nodeExpansion[nodeType][id] - 1 --blizz start with tbc as expansion 1
+                local expName = _G['EXPANSION_NAME'..expID]
+                local expInfo = GetExpansionDisplayInfo(expID)
                 local texture = GatherMate.nodeTextures[nodeType][id]
                 table.insert(self.DataSet, {
                     -- node fields
                     NodeType = nodeType,
-                    MapZone = map,
+                    MapZoneName = map,
                     MapZoneID = zone,
                     Coords = coords,
                     Source = node,
                     PosX = x,
                     PosY = y,
                     Texture = texture,
+                    ExpansionName = expName,
+                    ExpansionID = expID,
                     -- listview fields
                     Selected = false,
+                    -- filter fields
+                    mapZoneName = map:lower(),
+                    source = node:lower(),
+                    expansionName = expName:lower(),
                 })
             end
         end
         table.sort(self.DataSet, function(a, b)
-            if a.MapZone == b.MapZone then
+            if a.MapZoneName == b.MapZoneName then
                 return a.Source < b.Source
             else
-                return a.MapZone < b.MapZone
+                return a.MapZoneName < b.MapZoneName
             end
         end)
         local len = #self.DataSet
