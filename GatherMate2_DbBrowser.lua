@@ -222,6 +222,9 @@ function GM2_DbBrowser:Initialize()
     self.Window.ListView.ScrollBar:SetScript('OnShow', function(self)
         if next(GM2_DbBrowser.DataSet) then
             local len = #GM2_DbBrowser.DataSet
+            if tonumber(len) < 20.0 then
+                len = 20.0
+            end
             self:SetMinMaxValues(1, (len - GM2_DbBrowser.Window.ListView.NumRows - 1))
         else
             self:SetMinMaxValues(1, GM2_DbBrowser.Window.ListView.NumRows)
