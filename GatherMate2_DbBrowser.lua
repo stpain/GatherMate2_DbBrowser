@@ -13,6 +13,18 @@ GM2_DbBrowser.__index = GM2_DbBrowser
 local GatherMate = false
 local contextMenuSep = "|TInterface/COMMON/UI-TooltipDivider:8:150|t"
 
+local expansionIcons = {
+    [0] = "Interface\\AddOns\\GatherMate2_DbBrowser\\ExpansionIcons\\wow",
+    [1] = "Interface\\AddOns\\GatherMate2_DbBrowser\\ExpansionIcons\\tbc",
+    [2] = "Interface\\AddOns\\GatherMate2_DbBrowser\\ExpansionIcons\\wotlk",
+    [3] = "Interface\\AddOns\\GatherMate2_DbBrowser\\ExpansionIcons\\cata",
+    [4] = "Interface\\AddOns\\GatherMate2_DbBrowser\\ExpansionIcons\\mop",
+    [5] = "Interface\\AddOns\\GatherMate2_DbBrowser\\ExpansionIcons\\wod",
+    [6] = "Interface\\AddOns\\GatherMate2_DbBrowser\\ExpansionIcons\\legion",
+    [7] = "Interface\\AddOns\\GatherMate2_DbBrowser\\ExpansionIcons\\bfa",
+    --[8] = "Interface\\AddOns\\GatherMate2_DbBrowser\\ExpansionIcons\\sl",
+}
+
 -- set up addon
 function GM2_DbBrowser:Initialize()
     -- context menu stuff
@@ -29,7 +41,7 @@ function GM2_DbBrowser:Initialize()
 
     -- create ui
     self.Window.Frame = CreateFrame('FRAME', 'GatherMate2_DbBrowser', UIParent, "UIPanelDialogTemplate")
-    self.Window.Frame:SetSize(800, 525)
+    self.Window.Frame:SetSize(750, 575)
     self.Window.Frame:SetPoint('CENTER', 0, 0)
     self.Window.Frame:SetScript('OnShow', function(self)
         if next(GM2_DbBrowser.DataSet) then
@@ -71,7 +83,7 @@ function GM2_DbBrowser:Initialize()
 
     -- map zone sort button asc/desc
     self.Window.MapZoneButton = CreateFrame('BUTTON', 'GatherMate2_DbBrowserMapZoneButton', self.Window.Frame, "UIPanelButtonTemplate")
-    self.Window.MapZoneButton:SetPoint('TOPLEFT', self.Window.Frame, 'TOPLEFT', 10, -70)
+    self.Window.MapZoneButton:SetPoint('TOPLEFT', self.Window.Frame, 'TOPLEFT', 10, -120)
     self.Window.MapZoneButton:SetSize(250, 22)
     self.Window.MapZoneButton:SetText('Map Zone')
     self.Window.MapZoneButton.sort = 0
@@ -185,7 +197,7 @@ function GM2_DbBrowser:Initialize()
     self.Window.SearchBox = CreateFrame('EditBox', 'GatherMate2_DbBrowserSearchBox', self.Window.Frame, "InputBoxTemplate")
     self.Window.SearchBox:SetPoint('LEFT', self.Window.SourceButton, 'RIGHT', 6, 0)
     self.Window.SearchBox:SetFontObject('GameFontNormal')
-    self.Window.SearchBox:SetSize(134, 20)
+    self.Window.SearchBox:SetSize(220, 20)
     self.Window.SearchBox:SetAutoFocus(false)
     self.Window.SearchBox:Insert('Search term')
     self.Window.SearchBox:SetScript('OnTextChanged', function(self)
@@ -198,7 +210,7 @@ function GM2_DbBrowser:Initialize()
 
     -- drop down menu to select gm2 db
     self.Window.DatabaseSelectionDropDown = CreateFrame('FRAME', 'GatherMate2_DbBrowserDatabaseSelectionDropDown', self.Window.Frame, "UIDropDownMenuTemplate")
-    self.Window.DatabaseSelectionDropDown:SetPoint('LEFT', self.Window.SearchBox, 'RIGHT', -15, 0)
+    self.Window.DatabaseSelectionDropDown:SetPoint('BOTTOMRIGHT', self.Window.SearchBox, 'TOPRIGHT', 0, 0)
     UIDropDownMenu_SetWidth(self.Window.DatabaseSelectionDropDown, 125)
     UIDropDownMenu_SetText(self.Window.DatabaseSelectionDropDown, 'Select database')
     UIDropDownMenu_Initialize(self.Window.DatabaseSelectionDropDown, function()
@@ -234,7 +246,7 @@ function GM2_DbBrowser:Initialize()
     }
     -- create listview frame/area
     self.Window.ListView.Frame = CreateFrame('FRAME', 'GatherMate2_DbBrowserListView', self.Window.Frame)
-    self.Window.ListView.Frame:SetPoint('TOPLEFT', self.Window.Frame, 'TOPLEFT', 12, -93)
+    self.Window.ListView.Frame:SetPoint('TOPLEFT', self.Window.Frame, 'TOPLEFT', 12, -145)
     self.Window.ListView.Frame:SetPoint('BOTTOMRIGHT', self.Window.Frame, 'BOTTOMRIGHT', -8, 12)
     self.Window.ListView.Frame:EnableMouse(true)
     -- listview scroll bar, needs artwork?
@@ -301,6 +313,10 @@ function GM2_DbBrowser:Initialize()
         row.LocationText = row:CreateFontString('$parentLocationText', 'OVERLAY', 'GameFontNormal')
         row.LocationText:SetPoint('LEFT', 502, 0)
 
+        row.ExpansionIcon = row:CreateTexture('$parentExpansionIcon', 'ARTWORK')
+        row.ExpansionIcon:SetPoint('RIGHT', -2, 0)
+        row.ExpansionIcon:SetSize(64, 16)
+
         row.data = {}
 
         row:SetScript('OnShow', function(self)
@@ -311,11 +327,13 @@ function GM2_DbBrowser:Initialize()
                 local x = string.format("%.4f", self.data.PosX)
                 local y = string.format("%.4f", self.data.PosY)
                 self.LocationText:SetText(string.format('x %s : y %s', x, y))
+                self.ExpansionIcon:SetTexture(self.data.ExpansionIcon)
             else
                 self.MapZoneText:SetText(' ')
                 self.SourceIcon:SetTexture(nil)
                 self.SourceText:SetText(' ')
                 self.LocationText:SetText(' ')
+                self.ExpansionIcon:SetTexture(nil)
             end
             GM2_DbBrowser:UpdateRowBackground(self)
         end)
@@ -325,6 +343,7 @@ function GM2_DbBrowser:Initialize()
             self.SourceIcon:SetTexture(nil)
             self.SourceText:SetText(' ')
             self.LocationText:SetText(' ')
+            self.ExpansionIcon:SetTexture(nil)
         end)
 
         row:SetScript('OnMouseUp', function(self, button)
@@ -334,8 +353,6 @@ function GM2_DbBrowser:Initialize()
                     GM2_DbBrowser:UpdateRowBackground(self)
                 elseif button == 'RightButton' then
                     GM2_DbBrowser:OpenRowContextMenu(self)
-                    --print('deleted', self.data.NodeType, self.data.MapZoneID, self.data.Coords)
-                    --GatherMate:RemoveNodeByID(self.data.MapZoneID, self.data.NodeType, self.data.Coords)
                 end
             end
         end)
@@ -363,7 +380,6 @@ function GM2_DbBrowser:Initialize()
     self:SetMovable()
 end
 
---GatherMate:RemoveNodeByID(zone, nodeType, coord) zone=map id, nodeType=internal db name('Mining' or 'Fishing' etc), coord=encoded position
 
 function GM2_DbBrowser:UpdateRowBackground(row)
     if row.data then
@@ -512,7 +528,24 @@ function GM2_DbBrowser:OpenRowContextMenu(row)
     self.ContextMenu = {
         { text = 'Options', isTitle=true, notCheckable=true, },
         { text = row.data.Source, notCheckable=true, icon = row.data.Texture, },
+        { text = row.data.MapZoneName, notCheckable=true, },
+        { text = row.data.ExpansionName, notCheckable=true, },
+        { text = string.format('x %s', row.data.PosX), notCheckable=true, },
+        { text = string.format('y %s', row.data.PosY), notCheckable=true, },
+        { text = contextMenuSep, notCheckable=true, },
+        { text = 'Delete', notCheckable=true, func = function(self)
+            --GatherMate:RemoveNodeByID(row.data.MapZoneID, row.data.NodeType, row.data.Coords)
+            print('TESTING FUNCTION ONLY <<<------ deleted', row.data.MapZoneID, row.data.MapZoneName, row.data.Source, row.data.NodeType, row.data.Coords)
+            --self.DataSet
+        end },
     }
+    -- for k, v in pairs(row.data) do
+    --     print(k, v)
+    --     table.insert(self.ContextMenu, {
+    --         text = tostring(v),
+    --         notCheckable = true,
+    --     })
+    -- end
     EasyMenu(self.ContextMenu, self.ContextMenu_DropDown, "cursor", 0 , 16, "MENU")
 end
 
@@ -607,6 +640,7 @@ function GM2_DbBrowser:LoadDatabase(database, nodeType)
                     Texture = texture,
                     ExpansionName = expName,
                     ExpansionID = expID,
+                    ExpansionIcon = expansionIcons[expID],
                     -- listview fields
                     Selected = false,
                     -- filter fields
